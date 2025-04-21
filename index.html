@@ -24,10 +24,6 @@
       justify-content: center;
       flex-direction: column;
       z-index: 9999;
-      animation: fadeOut 3s forwards 3s;
-    }
-    @keyframes fadeOut {
-      to { opacity: 0; visibility: hidden; }
     }
     .logo-text {
       font-size: 3em;
@@ -88,7 +84,7 @@
     <h1>Suivi des Performances - Roland Samos</h1>
 
     <div id="identificationZone">
-      <form onsubmit="identifyUser(); return false;">
+      <form id="identificationForm">
         <input type="text" id="username" placeholder="Ton prénom ou pseudo" />
         <button type="submit">Valider</button>
       </form>
@@ -110,12 +106,17 @@
   </main>
 
   <script>
-    setTimeout(() => {
-      document.getElementById("intro").style.display = "none";
-      document.querySelector("main").style.display = "block";
-    }, 3000);
-  </script>
+    document.addEventListener("DOMContentLoaded", () => {
+      setTimeout(() => {
+        document.getElementById("intro").style.display = "none";
+        document.querySelector("main").style.display = "block";
+      }, 3000);
 
-  <!-- Le script principal continue ici -->
+      document.getElementById("identificationForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+        identifyUser();
+      });
+    });
+  </script>
 </body>
 </html>
