@@ -1,43 +1,58 @@
-// ... Tout le code reste inchangé jusqu'à la fonction renderRanking()
+<script>
+  function renderRanking() {
+    const exercices = [
+      "Aller-retour largeur",
+      "Aller longueur",
+      "Aller-retour longueur",
+      "Aller-retour largeur avec lignes"
+    ];
+    const jours = [0, 1, 2, 3, 4, 5, 6, 7];
+    const rankingZone = document.getElementById("rankingTable");
+    if (!rankingZone) return; // Sécurité
+    const tbody = rankingZone.querySelector("tbody");
+    tbody.innerHTML = "";
 
-function renderRanking() {
-  const exercices = [
-    "Aller-retour largeur",
-    "Aller longueur",
-    "Aller-retour longueur",
-    "Aller-retour largeur avec lignes"
-  ];
-  const jours = [0, 1, 2, 3, 4, 5, 6, 7];
-  const rankingZone = document.getElementById("rankingTable");
-  const tbody = rankingZone.querySelector("tbody");
-  tbody.innerHTML = "";
+    rankingZone.querySelector("caption").textContent = "Classements par exercice (meilleur temps)";
 
-  rankingZone.querySelector("caption").textContent = "Classements par exercice (meilleur temps)";
+    exercices.forEach((exo) => {
+      const data = joueurs.map(joueur => {
+        let best = Infinity;
+        for (let i = 0; i < jours.length; i++) {
+          const val = parseFloat(localStorage.getItem(`${joueur}-${exo}-j${jours[i]}`));
+          if (!isNaN(val) && val < best) best = val;
+        }
+        return { joueur, best: best === Infinity ? null : best };
+      }).filter(j => j.best !== null);
 
-  exercices.forEach((exo, idx) => {
-    const data = joueurs.map(joueur => {
-      let best = Infinity;
-      for (let i = 0; i < jours.length; i++) {
-        const val = parseFloat(localStorage.getItem(`${joueur}-${exo}-j${jours[i]}`));
-        if (!isNaN(val) && val < best) best = val;
-      }
-      return { joueur, best: best === Infinity ? null : best };
-    }).filter(j => j.best !== null);
+      data.sort((a, b) => a.best - b.best);
 
-    data.sort((a, b) => a.best - b.best);
+      const header = document.createElement("tr");
+      header.innerHTML = `<td colspan="3" style="font-weight:bold;background:#e6f0fa;">${exo}</td>`;
+      tbody.appendChild(header);
 
-    const header = document.createElement("tr");
-    header.innerHTML = `<td colspan="3" style="font-weight:bold;background:#e6f0fa;">${exo}</td>`;
-    tbody.appendChild(header);
-
-    data.forEach((j, index) => {
-      const row = document.createElement("tr");
-      row.innerHTML = `<td>${index + 1}</td><td>${j.joueur}</td><td>${j.best.toFixed(2)}</td>`;
-      tbody.appendChild(row);
+      data.forEach((j, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${index + 1}</td><td>${j.joueur}</td><td>${j.best.toFixed(2)}</td>`;
+        tbody.appendChild(row);
+      });
     });
+
+    rankingZone.style.display = "table";
+  }
+
+  // Injection automatique du tableau HTML au chargement
+  const rankingTableHTML = `
+    <table id="rankingTable" style="display:none; border: 2px solid #c96f2c; margin-top: 40px;">
+      <caption style="font-weight:bold; margin-bottom: 10px; font-size: 1.2em;">Classements par exercice (meilleur temps)</caption>
+      <thead>
+        <tr><th>Position</th><th>Joueur</th><th>Meilleur temps</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  `;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const main = document.querySelector("main");
+    if (main) main.insertAdjacentHTML("beforeend", rankingTableHTML);
   });
-
-  rankingZone.style.display = "table";
-}
-
-// ... reste du code inchangé
+</script>
