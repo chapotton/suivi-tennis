@@ -3,16 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Suivi Tennis</title>
+  <title>Suivi Tennis - Joueurs</title>
   <style>
     body {
       font-family: Arial, sans-serif;
+      background: #fdf6f0;
       margin: 20px;
-      background: #f0f8ff;
-      color: #333;
+      color: #2b5b2b;
     }
     h1 {
-      color: #005a9c;
+      color: #c96f2c;
+    }
+    select, button {
+      margin: 10px 5px;
+      padding: 6px;
     }
     table {
       border-collapse: collapse;
@@ -25,42 +29,38 @@
       text-align: center;
     }
     th {
-      background-color: #e6f0fa;
+      background-color: #c96f2c;
+      color: white;
     }
     input[type="number"] {
       width: 80px;
     }
-    .gain {
-      color: green;
-    }
-    .loss {
-      color: red;
+    .gain { color: green; }
+    .loss { color: red; }
+    .button-bar {
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
   <h1>Suivi des Performances Tennis</h1>
 
-  <table id="performanceTable">
-    <thead>
-      <tr>
-        <th>Exercice</th>
-        <th>Jour 1</th>
-        <th>Jour 7</th>
-        <th>Écart (1-7)</th>
-        <th>% Amélioration</th>
-        <th>Jour 14</th>
-        <th>Écart (7-14)</th>
-        <th>% Amélioration</th>
-        <th>Jour 21</th>
-        <th>Écart (14-21)</th>
-        <th>% Amélioration</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
+  <label for="playerSelect">Choisir un joueur :</label>
+  <select id="playerSelect">
+    <option value="Morgan">Morgan</option>
+    <option value="Loris">Loris</option>
+    <option value="Yann">Yann</option>
+  </select>
+
+  <div id="tableContainer"></div>
+
+  <div class="button-bar">
+    <button onclick="exportCSV()">Exporter CSV</button>
+    <button onclick="window.print()">Imprimer</button>
+  </div>
 
   <script>
+    const jours = ["J1", "J7", "J14", "J21", "J28", "J35", "J42", "J49"];
     const exercices = [
       "Aller-retour largeur",
       "Aller longueur",
@@ -68,66 +68,108 @@
       "Aller-retour largeur avec lignes"
     ];
 
-    function createRow(exercice) {
-      const row = document.createElement("tr");
-      const tdLabel = document.createElement("td");
-      tdLabel.textContent = exercice;
-      row.appendChild(tdLabel);
+    function createTable(joueur) {
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
+      headerRow.innerHTML = `<th>Exercice</th>` + jours.map(j => `<th>${j}</th>`).join('') +
+        `<th>Écart</th><th>%</th><th>Moyenne</th>`;
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
 
-      for (let i = 0; i < 4; i++) {
-        const input = document.createElement("input");
-        input.type = "number";
-        input.step = "0.01";
-        input.dataset.exo = exercice;
-        input.dataset.jour = i;
-        input.value = localStorage.getItem(`${exercice}-jour${i}`) || "";
-        input.oninput = () => {
-          localStorage.setItem(`${exercice}-jour${i}`, input.value);
-          updateRow(row, exercice);
-        };
-        const td = document.createElement("td");
-        td.appendChild(input);
-        row.appendChild(td);
-      }
+      const tbody = document.createElement("tbody");
+      exercices.forEach(ex => {
+        const row = document.createElement("tr");
+        const tdLabel = document.createElement("td");
+        tdLabel.textContent = ex;
+        row.appendChild(tdLabel);
 
-      for (let j = 0; j < 3; j++) {
-        const tdDiff = document.createElement("td");
-        tdDiff.className = "diff";
-        row.appendChild(tdDiff);
+        const values = [];
+        jours.forEach((j, i) => {
+          const input = document.createElement("input");
+          input.type = "number";
+          input.step = "0.01";
+          input.value = localStorage.getItem(`${joueur}-${ex}-j${i}`) || "";
+          input.oninput = () => {
+            localStorage.setItem(`${joueur}-${ex}-j${i}`, input.value);
+            updateRow(row, joueur, ex);
+          };
+          const td = document.createElement("td");
+          td.appendChild(input);
+          row.appendChild(td);
+          values.push(input);
+        });
+
+        const tdEcart = document.createElement("td");
         const tdPct = document.createElement("td");
+        const tdMoy = document.createElement("td");
+        tdEcart.className = "diff";
         tdPct.className = "pct";
+        tdMoy.className = "moyenne";
+        row.appendChild(tdEcart);
         row.appendChild(tdPct);
-      }
+        row.appendChild(tdMoy);
 
-      updateRow(row, exercice);
-      return row;
+        tbody.appendChild(row);
+        updateRow(row, joueur, ex);
+      });
+
+      table.appendChild(tbody);
+      return table;
     }
 
-    function updateRow(row, exercice) {
+    function updateRow(row, joueur, exercice) {
       const inputs = row.querySelectorAll("input");
-      const values = Array.from(inputs).map(i => parseFloat(i.value));
-      const diffs = row.querySelectorAll(".diff");
-      const pcts = row.querySelectorAll(".pct");
+      const values = Array.from(inputs).map(i => parseFloat(i.value)).filter(v => !isNaN(v));
+      const diffs = row.querySelector(".diff");
+      const pcts = row.querySelector(".pct");
+      const moyTd = row.querySelector(".moyenne");
 
-      for (let i = 0; i < 3; i++) {
-        if (!isNaN(values[i]) && !isNaN(values[i + 1])) {
-          const diff = values[i] - values[i + 1];
-          const pct = ((diff) / values[i]) * 100;
-          diffs[i].textContent = diff.toFixed(2);
-          diffs[i].className = diff > 0 ? "diff gain" : "diff loss";
-          pcts[i].textContent = pct.toFixed(1) + "%";
-          pcts[i].className = pct > 0 ? "pct gain" : "pct loss";
-        } else {
-          diffs[i].textContent = "-";
-          pcts[i].textContent = "-";
-        }
+      if (values.length >= 2) {
+        const last = values[values.length - 1];
+        const prev = values[values.length - 2];
+        const diff = prev - last;
+        const pct = (diff / prev) * 100;
+        diffs.textContent = diff.toFixed(2);
+        diffs.className = diff > 0 ? "diff gain" : "diff loss";
+        pcts.textContent = pct.toFixed(1) + "%";
+        pcts.className = pct > 0 ? "pct gain" : "pct loss";
+      } else {
+        diffs.textContent = "-";
+        pcts.textContent = "-";
       }
+
+      const moyenne = values.reduce((a, b) => a + b, 0) / values.length;
+      moyTd.textContent = isNaN(moyenne) ? "-" : moyenne.toFixed(2);
     }
 
-    const tbody = document.getElementById("tableBody");
-    exercices.forEach(ex => {
-      tbody.appendChild(createRow(ex));
-    });
+    function renderTable() {
+      const joueur = document.getElementById("playerSelect").value;
+      const container = document.getElementById("tableContainer");
+      container.innerHTML = "";
+      container.appendChild(createTable(joueur));
+    }
+
+    function exportCSV() {
+      const joueur = document.getElementById("playerSelect").value;
+      let csv = "Exercice," + jours.join(",") + ",Écart,% de gain,Moyenne\n";
+      document.querySelectorAll("tbody tr").forEach(row => {
+        const cells = row.querySelectorAll("td");
+        const rowData = Array.from(cells).map(cell => cell.querySelector("input")?.value || cell.textContent);
+        csv += rowData.join(",") + "\n";
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${joueur}_suivi_tennis.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    document.getElementById("playerSelect").addEventListener("change", renderTable);
+    renderTable();
   </script>
 </body>
 </html>
