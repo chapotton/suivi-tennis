@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Suivi Tennis</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f0f8ff;
+      color: #333;
+    }
+    h1 {
+      color: #005a9c;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #e6f0fa;
+    }
+    input[type="number"] {
+      width: 80px;
+    }
+    .gain {
+      color: green;
+    }
+    .loss {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>Suivi des Performances Tennis</h1>
+
+  <table id="performanceTable">
+    <thead>
+      <tr>
+        <th>Exercice</th>
+        <th>Jour 1</th>
+        <th>Jour 7</th>
+        <th>Écart (1-7)</th>
+        <th>% Amélioration</th>
+        <th>Jour 14</th>
+        <th>Écart (7-14)</th>
+        <th>% Amélioration</th>
+        <th>Jour 21</th>
+        <th>Écart (14-21)</th>
+        <th>% Amélioration</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+
+  <script>
+    const exercices = [
+      "Aller-retour largeur",
+      "Aller longueur",
+      "Aller-retour longueur",
+      "Aller-retour largeur avec lignes"
+    ];
+
+    function createRow(exercice) {
+      const row = document.createElement("tr");
+      const tdLabel = document.createElement("td");
+      tdLabel.textContent = exercice;
+      row.append
