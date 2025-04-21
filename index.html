@@ -14,7 +14,7 @@
     h1 {
       color: #c96f2c;
     }
-    select, button {
+    select, button, input[type="text"] {
       margin: 10px 5px;
       padding: 6px;
     }
@@ -46,11 +46,9 @@
   <h1>Suivi des Performances Tennis</h1>
 
   <label for="playerSelect">Choisir un joueur :</label>
-  <select id="playerSelect">
-    <option value="Morgan">Morgan</option>
-    <option value="Loris">Loris</option>
-    <option value="Yann">Yann</option>
-  </select>
+  <select id="playerSelect"></select>
+  <input type="text" id="newPlayer" placeholder="Ajouter un joueur" />
+  <button onclick="addPlayer()">Ajouter</button>
 
   <div id="tableContainer"></div>
 
@@ -68,6 +66,31 @@
       "Aller-retour largeur avec lignes"
     ];
 
+    let joueurs = JSON.parse(localStorage.getItem("joueurs")) || ["Morgan", "Loris", "Yann"];
+
+    function populatePlayerSelect() {
+      const select = document.getElementById("playerSelect");
+      select.innerHTML = "";
+      joueurs.forEach(j => {
+        const option = document.createElement("option");
+        option.value = j;
+        option.textContent = j;
+        select.appendChild(option);
+      });
+    }
+
+    function addPlayer() {
+      const newPlayer = document.getElementById("newPlayer").value.trim();
+      if (newPlayer && !joueurs.includes(newPlayer)) {
+        joueurs.push(newPlayer);
+        localStorage.setItem("joueurs", JSON.stringify(joueurs));
+        populatePlayerSelect();
+        document.getElementById("newPlayer").value = "";
+        document.getElementById("playerSelect").value = newPlayer;
+        renderTable();
+      }
+    }
+
     function createTable(joueur) {
       const table = document.createElement("table");
       const thead = document.createElement("thead");
@@ -84,7 +107,7 @@
         tdLabel.textContent = ex;
         row.appendChild(tdLabel);
 
-        const values = [];
+        const inputs = [];
         jours.forEach((j, i) => {
           const input = document.createElement("input");
           input.type = "number";
@@ -97,7 +120,7 @@
           const td = document.createElement("td");
           td.appendChild(input);
           row.appendChild(td);
-          values.push(input);
+          inputs.push(input);
         });
 
         const tdEcart = document.createElement("td");
@@ -120,14 +143,17 @@
 
     function updateRow(row, joueur, exercice) {
       const inputs = row.querySelectorAll("input");
-      const values = Array.from(inputs).map(i => parseFloat(i.value)).filter(v => !isNaN(v));
+      const allValues = Array.from(inputs).map(i => parseFloat(i.value));
+      const filledValues = allValues.filter(v => !isNaN(v));
+
       const diffs = row.querySelector(".diff");
       const pcts = row.querySelector(".pct");
       const moyTd = row.querySelector(".moyenne");
 
-      if (values.length >= 2) {
-        const last = values[values.length - 1];
-        const prev = values[values.length - 2];
+      const lastIndex = allValues.map((v, i) => !isNaN(v) ? i : null).filter(i => i !== null).slice(-2);
+      if (lastIndex.length === 2) {
+        const prev = allValues[lastIndex[0]];
+        const last = allValues[lastIndex[1]];
         const diff = prev - last;
         const pct = (diff / prev) * 100;
         diffs.textContent = diff.toFixed(2);
@@ -139,7 +165,7 @@
         pcts.textContent = "-";
       }
 
-      const moyenne = values.reduce((a, b) => a + b, 0) / values.length;
+      const moyenne = filledValues.reduce((a, b) => a + b, 0) / filledValues.length;
       moyTd.textContent = isNaN(moyenne) ? "-" : moyenne.toFixed(2);
     }
 
@@ -169,6 +195,7 @@
     }
 
     document.getElementById("playerSelect").addEventListener("change", renderTable);
+    populatePlayerSelect();
     renderTable();
   </script>
 </body>
