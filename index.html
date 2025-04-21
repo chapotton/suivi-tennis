@@ -105,7 +105,247 @@
     if (audio) audio.play().catch(() => {});
   }, 3000);
 
-  // Toutes les fonctions JS, y compris updateRow, updateRanking, highlightTopRank, etc.
+  let joueurs = JSON.parse(localStorage.getItem("joueurs")) || [];
+let currentUser = null;
+
+function identifyUser() {
+  const input = document.getElementById("username").value.trim();
+  if (!input) return;
+  if (input === "Yann69") {
+    currentUser = "admin";
+    document.getElementById("identificationZone").style.display = "none";
+    document.getElementById("adminZone").style.display = "block";
+    document.getElementById("exportZone").style.display = "block";
+    renderTables();
+  } else {
+    if (joueurs.includes(input)) {
+      currentUser = input;
+      document.getElementById("identificationZone").style.display = "none";
+      renderTable(input);
+    } else {
+      if (joueurs.some(j => j.toLowerCase() === input.toLowerCase())) {
+        alert("Ce prénom ou pseudo existe déjà avec une autre orthographe. Merci d’en choisir un légèrement différent.");
+      } else {
+        joueurs.push(input);
+        localStorage.setItem("joueurs", JSON.stringify(joueurs));
+        currentUser = input;
+        document.getElementById("identificationZone").style.display = "none";
+        renderTable(input);
+      }
+    }
+  }
+}
+
+function renderTables() {
+  const container = document.getElementById("tableContainer");
+  container.innerHTML = "";
+  joueurs.forEach(joueur => container.appendChild(createTable(joueur)));
+  updateRanking();
+  highlightTopRank();
+}
+
+function renderTable(joueur) {
+  const container = document.getElementById("tableContainer");
+  container.innerHTML = "";
+  container.appendChild(createTable(joueur));
+}
+
+function createTable(joueur) {
+  const jours = ["J1", "J7", "J14", "J21", "J28", "J35", "J42", "J49"];
+  const exercices = [
+    "Aller-retour largeur",
+    "Aller longueur",
+    "Aller-retour longueur",
+    "Aller-retour largeur avec lignes"
+  ];
+  const container = document.createElement("div");
+  const title = document.createElement("h2");
+  title.textContent = joueur;
+  container.appendChild(title);
+  const table = document.createElement("table");
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  headerRow.innerHTML = `<th>Exercice</th>` + jours.map(j => `<th>${j}</th>`).join('') + `<th>Écart</th><th>%</th><th>Moyenne</th>`;
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  exercices.forEach(ex => {
+    const row = document.createElement("tr");
+    const tdLabel = document.createElement("td");
+    tdLabel.textContent = ex;
+    row.appendChild(tdLabel);
+    const inputs = [];
+    jours.forEach((j, i) => {
+      const input = document.createElement("input");
+      input.type = "number";
+      input.step = "0.01";
+      input.value = localStorage.getItem(`${joueur}-${ex}-j${i}`) || "";
+      input.oninput = () => {
+        localStorage.setItem(`${joueur}-${ex}-j${i}`, input.value);
+        updateRow(row, joueur, ex);
+      };
+      const td = document.createElement("td");
+      td.appendChild(input);
+      row.appendChild(td);
+      inputs.push(input);
+    });
+    const tdEcart = document.createElement("td");
+    const tdPct = document.createElement("td");
+    const tdMoy = document.createElement("td");
+    tdEcart.className = "diff";
+    tdPct.className = "pct";
+    tdMoy.className = "moyenne";
+    row.appendChild(tdEcart);
+    row.appendChild(tdPct);
+    row.appendChild(tdMoy);
+    tbody.appendChild(row);
+    updateRow(row, joueur, ex);
+  });
+  table.appendChild(tbody);
+  container.appendChild(table);
+  return container;
+}
+
+function updateRow(row, joueur, exercice) {
+  const inputs = row.querySelectorAll("input");
+  const allValues = Array.from(inputs).map(i => parseFloat(i.value));
+  const filledValues = allValues.filter(v => !isNaN(v));
+  const diffs = row.querySelector(".diff");
+  const pcts = row.querySelector(".pct");
+  const moyTd = row.querySelector(".moyenne");
+  const lastIndex = allValues.map((v, i) => !isNaN(v) ? i : null).filter(i => i !== null).slice(-2);
+
+  if (lastIndex.length === 2) {
+    const prev = allValues[lastIndex[0]];
+    const last = allValues[lastIndex[1]];
+    const diff = prev - last;
+    const pct = (diff / prev) * 100;
+    diffs.textContent = diff.toFixed(2);
+    diffs.className = diff > 0 ? "diff gain" : "diff loss";
+    pcts.textContent = pct.toFixed(1) + "%";
+    pcts.className = pct > 0 ? "pct gain" : "pct loss";
+  } else {
+    diffs.textContent = "-";
+    pcts.textContent = "-";
+  }
+
+  const moyenne = filledValues.reduce((a, b) => a + b, 0) / filledValues.length;
+  moyTd.textContent = isNaN(moyenne) ? "-" : moyenne.toFixed(2);
+
+  if (document.getElementById("adminZone").style.display !== "none") {
+    updateRanking();
+    highlightTopRank();
+  }
+}
+
+function updateRanking() {
+  const allTables = document.querySelectorAll("h2");
+  const scores = [];
+  const byExercise = {};
+  allTables.forEach(h => {
+    const joueur = h.textContent;
+    const moyennes = [];
+    const rows = h.nextElementSibling.querySelectorAll("tbody tr");
+    rows.forEach((row, index) => {
+      const moyenneCell = row.querySelector(".moyenne");
+      const val = parseFloat(moyenneCell?.textContent);
+      if (!isNaN(val)) {
+        moyennes.push(val);
+        if (!byExercise[index]) byExercise[index] = [];
+        byExercise[index].push({ joueur, moyenne: val });
+      }
+    });
+    const total = moyennes.reduce((a, b) => a + b, 0) / moyennes.length;
+    if (!isNaN(total)) scores.push({ joueur, moyenne: total });
+  });
+  scores.sort((a, b) => a.moyenne - b.moyenne);
+  const tableHTML = `<h2>Classement général</h2>
+    <table id="rankingTable">
+      <thead><tr><th>Rang</th><th>Joueur</th><th>Moyenne générale</th></tr></thead>
+      <tbody>
+        ${scores.map((s, i) => `<tr><td>${i + 1}</td><td>${s.joueur}</td><td>${s.moyenne.toFixed(2)}</td></tr>`).join('')}
+      </tbody>
+    </table>`;
+  document.getElementById("rankingContainer").innerHTML = tableHTML;
+  const exos = [
+    "Aller-retour largeur",
+    "Aller longueur",
+    "Aller-retour longueur",
+    "Aller-retour largeur avec lignes"
+  ];
+  let exerciseTables = "<h2>Classements par exercice</h2>";
+  Object.entries(byExercise).forEach(([idx, list]) => {
+    const sorted = list.sort((a, b) => a.moyenne - b.moyenne);
+    exerciseTables += `
+      <div class="ranking-section">
+        <h3>${exos[idx]}</h3>
+        <table>
+          <thead><tr><th>Rang</th><th>Joueur</th><th>Moyenne</th></tr></thead>
+          <tbody>
+            ${sorted.map((e, i) => `<tr><td>${i + 1}</td><td>${e.joueur}</td><td>${e.moyenne.toFixed(2)}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  });
+  document.getElementById("exerciseRankings").innerHTML = exerciseTables;
+}
+
+function highlightTopRank() {
+  const tables = document.querySelectorAll("#rankingContainer table, #exerciseRankings table");
+  tables.forEach(table => {
+    const rows = table.querySelectorAll("tbody tr");
+    rows.forEach((row, i) => {
+      row.classList.remove("gold", "silver", "bronze");
+      if (i === 0) row.classList.add("gold");
+      else if (i === 1) row.classList.add("silver");
+      else if (i === 2) row.classList.add("bronze");
+    });
+  });
+}
+
+function addPlayer() {
+  const name = document.getElementById("newPlayer").value.trim();
+  if (name && !joueurs.includes(name)) {
+    joueurs.push(name);
+    localStorage.setItem("joueurs", JSON.stringify(joueurs));
+    renderTables();
+  }
+}
+
+function removePlayer() {
+  const name = prompt("Quel joueur voulez-vous supprimer ?");
+  if (name && joueurs.includes(name)) {
+    joueurs = joueurs.filter(j => j !== name);
+    localStorage.setItem("joueurs", JSON.stringify(joueurs));
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(name + "-")) localStorage.removeItem(key);
+    });
+    renderTables();
+  }
+}
+
+function exportCSV() {
+  let csv = "Joueur,Exercice,J1,J7,J14,J21,J28,J35,J42,J49,Écart,% de gain,Moyenne
+";
+  document.querySelectorAll("h2").forEach((title, index) => {
+    const joueur = title.textContent;
+    const table = title.nextElementSibling;
+    table.querySelectorAll("tbody tr").forEach(row => {
+      const cells = row.querySelectorAll("td");
+      const rowData = Array.from(cells).map(cell => cell.querySelector("input")?.value || cell.textContent);
+      csv += [joueur, ...rowData].join(",") + "
+";
+    });
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `suivi_tennis_complet.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
   // sont ici automatiquement restaurées depuis les versions précédentes
 </script>
 </body>
