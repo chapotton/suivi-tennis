@@ -106,6 +106,217 @@
   </main>
 
   <script>
+    let joueurs = JSON.parse(localStorage.getItem("joueurs")) || [];
+    let currentUser = null;
+
+    function identifyUser() {
+      const input = document.getElementById("username").value.trim();
+      if (!input) return;
+
+      if (input === "Yann69") {
+        currentUser = "admin";
+        document.getElementById("identificationZone").style.display = "none";
+        document.getElementById("adminZone").style.display = "block";
+        document.getElementById("exportZone").style.display = "block";
+        renderTables();
+        renderClassement();
+      } else {
+        if (joueurs.includes(input)) {
+          currentUser = input;
+          document.getElementById("identificationZone").style.display = "none";
+          renderTable(input);
+        } else {
+          if (joueurs.some(j => j.toLowerCase() === input.toLowerCase())) {
+            alert("Ce prénom ou pseudo existe déjà avec une autre orthographe. Merci d’en choisir un légèrement différent.");
+          } else {
+            joueurs.push(input);
+            localStorage.setItem("joueurs", JSON.stringify(joueurs));
+            currentUser = input;
+            document.getElementById("identificationZone").style.display = "none";
+            renderTable(input);
+          }
+        }
+      }
+    }
+
+    function renderTables() {
+      const container = document.getElementById("tableContainer");
+      container.innerHTML = "";
+      joueurs.forEach(joueur => container.appendChild(createTable(joueur)));
+    }
+
+    function renderTable(joueur) {
+      const container = document.getElementById("tableContainer");
+      container.innerHTML = "";
+      container.appendChild(createTable(joueur));
+    }
+
+    function createTable(joueur) {
+      const jours = ["J1", "J7", "J14", "J21", "J28", "J35", "J42", "J49"];
+      const exercices = [
+        "Aller-retour largeur",
+        "Aller longueur",
+        "Aller-retour longueur",
+        "Aller-retour largeur avec lignes"
+      ];
+      const container = document.createElement("div");
+      const title = document.createElement("h2");
+      title.textContent = joueur;
+      container.appendChild(title);
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
+      headerRow.innerHTML = `<th>Exercice</th>` + jours.map(j => `<th>${j}</th>`).join('') + `<th>Écart</th><th>%</th><th>Moyenne</th>`;
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+      const tbody = document.createElement("tbody");
+      exercices.forEach(ex => {
+        const row = document.createElement("tr");
+        const tdLabel = document.createElement("td");
+        tdLabel.textContent = ex;
+        row.appendChild(tdLabel);
+        jours.forEach((j, i) => {
+          const input = document.createElement("input");
+          input.type = "number";
+          input.step = "0.01";
+          input.value = localStorage.getItem(`${joueur}-${ex}-j${i}`) || "";
+          input.oninput = () => {
+            localStorage.setItem(`${joueur}-${ex}-j${i}`, input.value);
+            updateRow(row, joueur, ex);
+          };
+          const td = document.createElement("td");
+          td.appendChild(input);
+          row.appendChild(td);
+        });
+        const tdEcart = document.createElement("td");
+        const tdPct = document.createElement("td");
+        const tdMoy = document.createElement("td");
+        tdEcart.className = "diff";
+        tdPct.className = "pct";
+        tdMoy.className = "moyenne";
+        row.appendChild(tdEcart);
+        row.appendChild(tdPct);
+        row.appendChild(tdMoy);
+        tbody.appendChild(row);
+        updateRow(row, joueur, ex);
+      });
+      table.appendChild(tbody);
+      container.appendChild(table);
+      return container;
+    }
+
+    function updateRow(row, joueur, exercice) {
+      const inputs = row.querySelectorAll("input");
+      const allValues = Array.from(inputs).map(i => parseFloat(i.value));
+      const filledValues = allValues.filter(v => !isNaN(v));
+      const diffs = row.querySelector(".diff");
+      const pcts = row.querySelector(".pct");
+      const moyTd = row.querySelector(".moyenne");
+      const lastIndex = allValues.map((v, i) => !isNaN(v) ? i : null).filter(i => i !== null).slice(-2);
+      if (lastIndex.length === 2) {
+        const prev = allValues[lastIndex[0]];
+        const last = allValues[lastIndex[1]];
+        const diff = prev - last;
+        const pct = (diff / prev) * 100;
+        diffs.textContent = diff.toFixed(2);
+        diffs.className = diff > 0 ? "diff gain" : "diff loss";
+        pcts.textContent = pct.toFixed(1) + "%";
+        pcts.className = pct > 0 ? "pct gain" : "pct loss";
+      } else {
+        diffs.textContent = "-";
+        pcts.textContent = "-";
+      }
+      const moyenne = filledValues.reduce((a, b) => a + b, 0) / filledValues.length;
+      moyTd.textContent = isNaN(moyenne) ? "-" : moyenne.toFixed(2);
+    }
+
+    function renderClassement() {
+      const container = document.getElementById("classementContainer");
+      container.innerHTML = "<h3>Classement des joueurs par exercice (moyenne)</h3>";
+      const exercices = [
+        "Aller-retour largeur",
+        "Aller longueur",
+        "Aller-retour longueur",
+        "Aller-retour largeur avec lignes"
+      ];
+
+      exercices.forEach(ex => {
+        const scores = joueurs.map(j => {
+          let total = 0;
+          let count = 0;
+          for (let i = 0; i < 8; i++) {
+            const val = parseFloat(localStorage.getItem(`${j}-${ex}-j${i}`));
+            if (!isNaN(val)) {
+              total += val;
+              count++;
+            }
+          }
+          return { nom: j, moyenne: count ? total / count : Infinity };
+        });
+        scores.sort((a, b) => a.moyenne - b.moyenne);
+
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<th>${ex}</th><th>Moyenne</th>`;
+        thead.appendChild(tr);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        scores.forEach(s => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${s.nom}</td><td>${s.moyenne === Infinity ? "-" : s.moyenne.toFixed(2)}</td>`;
+          tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        container.appendChild(table);
+      });
+    }
+
+    function addPlayer() {
+      const name = document.getElementById("newPlayer").value.trim();
+      if (name && !joueurs.includes(name)) {
+        joueurs.push(name);
+        localStorage.setItem("joueurs", JSON.stringify(joueurs));
+        renderTables();
+        renderClassement();
+      }
+    }
+
+    function removePlayer() {
+      const name = prompt("Quel joueur voulez-vous supprimer ?");
+      if (name && joueurs.includes(name)) {
+        joueurs = joueurs.filter(j => j !== name);
+        localStorage.setItem("joueurs", JSON.stringify(joueurs));
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith(name + "-")) localStorage.removeItem(key);
+        });
+        renderTables();
+        renderClassement();
+      }
+    }
+
+    function exportCSV() {
+      let csv = "Joueur,Exercice,J1,J7,J14,J21,J28,J35,J42,J49,Écart,% de gain,Moyenne\n";
+      document.querySelectorAll("h2").forEach((title, index) => {
+        const joueur = title.textContent;
+        const table = title.nextElementSibling;
+        table.querySelectorAll("tbody tr").forEach(row => {
+          const cells = row.querySelectorAll("td");
+          const rowData = Array.from(cells).map(cell => cell.querySelector("input")?.value || cell.textContent);
+          csv += [joueur, ...rowData].join(",") + "\n";
+        });
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `suivi_tennis_complet.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
       setTimeout(() => {
         document.getElementById("intro").style.display = "none";
