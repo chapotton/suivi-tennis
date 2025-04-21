@@ -7,7 +7,7 @@ function renderRanking() {
     "Aller-retour longueur",
     "Aller-retour largeur avec lignes"
   ];
-  const jours = ["j0", "j1", "j2", "j3", "j4", "j5", "j6", "j7"];
+  const jours = [0, 1, 2, 3, 4, 5, 6, 7];
   const rankingZone = document.getElementById("rankingTable");
   const tbody = rankingZone.querySelector("tbody");
   tbody.innerHTML = "";
@@ -18,7 +18,7 @@ function renderRanking() {
     const data = joueurs.map(joueur => {
       let best = Infinity;
       for (let i = 0; i < jours.length; i++) {
-        const val = parseFloat(localStorage.getItem(`${joueur}-${exo}-${jours[i]}`));
+        const val = parseFloat(localStorage.getItem(`${joueur}-${exo}-j${jours[i]}`));
         if (!isNaN(val) && val < best) best = val;
       }
       return { joueur, best: best === Infinity ? null : best };
