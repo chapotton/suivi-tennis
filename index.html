@@ -78,14 +78,19 @@
 </head>
 <body>
   <div id="splash">
+    <audio autoplay>
+      <source src="https://cdn.pixabay.com/download/audio/2022/12/04/audio_1f1b4771b9.mp3?filename=soft-intro-ambient-12699.mp3" type="audio/mpeg">
+    </audio>
     <div class="logo-text">🎾 Roland Samos 🎾</div>
   </div>
 
   <main style="display:none;">
     <h1>Suivi des Performances - Roland Samos</h1>
 
-    <input type="password" id="adminPassword" placeholder="Mot de passe administrateur" />
-    <button onclick="loginAdmin()">Connexion</button>
+    <div id="loginZone">
+      <input type="password" id="adminPassword" placeholder="Mot de passe administrateur" />
+      <button onclick="loginAdmin()">Connexion</button>
+    </div>
 
     <div id="adminZone" style="display: none;">
       <input type="text" id="newPlayer" placeholder="Ajouter un joueur" />
@@ -108,9 +113,6 @@
     }, 3000);
   </script>
 
-  <!-- ton script existant ici (inchangé) -->
-  <script>
-    // ... Le script JS existant reste inchangé ici ...
-  </script>
+  <!-- Le script principal sera inséré ici dans une prochaine étape -->
 </body>
 </html>
