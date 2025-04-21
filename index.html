@@ -1,191 +1,57 @@
-<!-- Partie en-tête conservée -->
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Suivi Tennis - Roland Samos</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #fdf6f0;
-      margin: 0;
-      color: #2b5b2b;
-    }
-    #splash {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: #2b5b2b;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      z-index: 9999;
-      color: #fff;
-      animation: fadeOut 3s forwards 3s;
-    }
-    audio { display: none; }
-    @keyframes fadeOut {
-      to { opacity: 0; visibility: hidden; }
-    }
-    .logo-text {
-      font-size: 2.5em;
-      font-weight: bold;
-      color: #fff;
-      animation: zoomIn 2s ease-out;
-    }
-    @keyframes zoomIn {
-      from { transform: scale(0); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-    main {
-      padding: 100px 20px 20px;
-      background: url('https://upload.wikimedia.org/wikipedia/fr/thumb/3/33/Logo_Roland-Garros.svg/2560px-Logo_Roland-Garros.svg.png') no-repeat center top;
-      background-size: 200px;
-    }
-    h1 {
-      color: #c96f2c;
-    }
-    select, button, input[type="text"], input[type="password"] {
-      margin: 10px 5px;
-      padding: 6px;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-bottom: 40px;
-      background-color: white;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #c96f2c;
-      color: white;
-    }
-    input[type="number"] {
-      width: 80px;
-    }
-    .gain { color: green; }
-    .loss { color: red; }
-    .button-bar {
-      margin-top: 20px;
-    }
-    #rankingTable {
-      margin-top: 40px;
-      background-color: #ffffff;
-      border: 2px solid #2b5b2b;
-    }
-    #rankingTable th {
-      background-color: #2b5b2b;
-      color: #fff;
-    }
-    .ranking-section {
-      margin-bottom: 50px;
-    }
-  </style>
-</head>
-<body>
-  <div id="splash">
-    <audio autoplay id="splashAudio">
-      <source src="https://cdn.pixabay.com/download/audio/2022/12/04/audio_1f1b4771b9.mp3?filename=soft-intro-ambient-12699.mp3" type="audio/mpeg">
-    </audio>
-    <div class="logo-text">🎾 Roland Samos 🎾</div>
-  </div>
+// ... tout le code HTML existant jusqu’à la fin du script ...
 
-  <main style="display:none;">
-    <h1>Suivi des Performances - Roland Samos</h1>
+function updateRow(row, joueur, exercice) {
+  const inputs = row.querySelectorAll("input");
+  const allValues = Array.from(inputs).map(i => parseFloat(i.value));
+  const filledValues = allValues.filter(v => !isNaN(v));
+  const diffs = row.querySelector(".diff");
+  const pcts = row.querySelector(".pct");
+  const moyTd = row.querySelector(".moyenne");
+  const lastIndex = allValues.map((v, i) => !isNaN(v) ? i : null).filter(i => i !== null).slice(-2);
 
-    <div id="identificationZone">
-      <input type="text" id="username" placeholder="Ton prénom ou pseudo" />
-      <button onclick="identifyUser()">Valider</button>
-    </div>
+  if (lastIndex.length === 2) {
+    const prev = allValues[lastIndex[0]];
+    const last = allValues[lastIndex[1]];
+    const diff = prev - last;
+    const pct = (diff / prev) * 100;
+    diffs.textContent = diff.toFixed(2);
+    diffs.className = diff > 0 ? "diff gain" : "diff loss";
+    pcts.textContent = pct.toFixed(1) + "%";
+    pcts.className = pct > 0 ? "pct gain" : "pct loss";
+  } else {
+    diffs.textContent = "-";
+    pcts.textContent = "-";
+  }
 
-    <div id="adminZone" style="display: none;">
-      <input type="text" id="newPlayer" placeholder="Ajouter un joueur" />
-      <button onclick="addPlayer()">Ajouter</button>
-      <button onclick="removePlayer()">Supprimer joueur sélectionné</button>
-      <div id="rankingContainer"></div>
-      <div id="exerciseRankings"></div>
-    </div>
+  const moyenne = filledValues.reduce((a, b) => a + b, 0) / filledValues.length;
+  moyTd.textContent = isNaN(moyenne) ? "-" : moyenne.toFixed(2);
 
-    <div id="tableContainer"></div>
+  // Met à jour le classement si l'utilisateur est l'admin
+  if (document.getElementById("adminZone").style.display !== "none") {
+    updateRanking();
+    highlightTopRank();
+  }
+}
 
-    <div class="button-bar" id="exportZone" style="display: none;">
-      <button onclick="exportCSV()">Exporter CSV</button>
-      <button onclick="window.print()">Imprimer</button>
-    </div>
-  </main>
+function highlightTopRank() {
+  const tables = document.querySelectorAll("#rankingContainer table, #exerciseRankings table");
+  tables.forEach(table => {
+    const rows = table.querySelectorAll("tbody tr");
+    rows.forEach((row, i) => {
+      row.classList.remove("gold", "silver", "bronze");
+      if (i === 0) row.classList.add("gold");
+      else if (i === 1) row.classList.add("silver");
+      else if (i === 2) row.classList.add("bronze");
+    });
+  });
+}
 
-  <script>
-    setTimeout(() => {
-      document.getElementById("splash").style.display = "none";
-      document.querySelector("main").style.display = "block";
-      const audio = document.getElementById("splashAudio");
-      if (audio) audio.play().catch(() => {});
-    }, 3000);
+const style = document.createElement("style");
+style.innerHTML = `
+  .gold { background-color: gold !important; font-weight: bold; }
+  .silver { background-color: silver !important; font-weight: bold; }
+  .bronze { background-color: #cd7f32 !important; font-weight: bold; }
+`;
+document.head.appendChild(style);
 
-    function updateRanking() {
-      const allTables = document.querySelectorAll("h2");
-      const scores = [];
-      const byExercise = {};
-
-      allTables.forEach(h => {
-        const joueur = h.textContent;
-        const moyennes = [];
-        const rows = h.nextElementSibling.querySelectorAll("tbody tr");
-
-        rows.forEach((row, index) => {
-          const moyenneCell = row.querySelector(".moyenne");
-          const val = parseFloat(moyenneCell?.textContent);
-          if (!isNaN(val)) {
-            moyennes.push(val);
-            if (!byExercise[index]) byExercise[index] = [];
-            byExercise[index].push({ joueur, moyenne: val });
-          }
-        });
-
-        const total = moyennes.reduce((a, b) => a + b, 0) / moyennes.length;
-        if (!isNaN(total)) scores.push({ joueur, moyenne: total });
-      });
-
-      scores.sort((a, b) => a.moyenne - b.moyenne);
-      const tableHTML = `<h2>Classement général</h2>
-        <table id="rankingTable">
-          <thead><tr><th>Rang</th><th>Joueur</th><th>Moyenne générale</th></tr></thead>
-          <tbody>
-            ${scores.map((s, i) => `<tr><td>${i + 1}</td><td>${s.joueur}</td><td>${s.moyenne.toFixed(2)}</td></tr>`).join('')}
-          </tbody>
-        </table>`;
-      document.getElementById("rankingContainer").innerHTML = tableHTML;
-
-      // Classements par exercice
-      const exos = [
-        "Aller-retour largeur",
-        "Aller longueur",
-        "Aller-retour longueur",
-        "Aller-retour largeur avec lignes"
-      ];
-      let exerciseTables = "<h2>Classements par exercice</h2>";
-      Object.entries(byExercise).forEach(([idx, list]) => {
-        const sorted = list.sort((a, b) => a.moyenne - b.moyenne);
-        exerciseTables += `
-          <div class="ranking-section">
-            <h3>${exos[idx]}</h3>
-            <table>
-              <thead><tr><th>Rang</th><th>Joueur</th><th>Moyenne</th></tr></thead>
-              <tbody>
-                ${sorted.map((e, i) => `<tr><td>${i + 1}</td><td>${e.joueur}</td><td>${e.moyenne.toFixed(2)}</td></tr>`).join('')}
-              </tbody>
-            </table>
-          </div>`;
-      });
-      document.getElementById("exerciseRankings").innerHTML = exerciseTables;
-    }
-
-    const observer = new MutationObserver(() => updateRanking());
-    observer.observe(document.getElementById("tableContainer"), { childList: true, subtree: true });
-  </script>
+// ... reste du script JS si présent ...
