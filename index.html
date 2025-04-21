@@ -72,4 +72,62 @@
       const row = document.createElement("tr");
       const tdLabel = document.createElement("td");
       tdLabel.textContent = exercice;
-      row.append
+      row.appendChild(tdLabel);
+
+      for (let i = 0; i < 4; i++) {
+        const input = document.createElement("input");
+        input.type = "number";
+        input.step = "0.01";
+        input.dataset.exo = exercice;
+        input.dataset.jour = i;
+        input.value = localStorage.getItem(`${exercice}-jour${i}`) || "";
+        input.oninput = () => {
+          localStorage.setItem(`${exercice}-jour${i}`, input.value);
+          updateRow(row, exercice);
+        };
+        const td = document.createElement("td");
+        td.appendChild(input);
+        row.appendChild(td);
+      }
+
+      for (let j = 0; j < 3; j++) {
+        const tdDiff = document.createElement("td");
+        tdDiff.className = "diff";
+        row.appendChild(tdDiff);
+        const tdPct = document.createElement("td");
+        tdPct.className = "pct";
+        row.appendChild(tdPct);
+      }
+
+      updateRow(row, exercice);
+      return row;
+    }
+
+    function updateRow(row, exercice) {
+      const inputs = row.querySelectorAll("input");
+      const values = Array.from(inputs).map(i => parseFloat(i.value));
+      const diffs = row.querySelectorAll(".diff");
+      const pcts = row.querySelectorAll(".pct");
+
+      for (let i = 0; i < 3; i++) {
+        if (!isNaN(values[i]) && !isNaN(values[i + 1])) {
+          const diff = values[i] - values[i + 1];
+          const pct = ((diff) / values[i]) * 100;
+          diffs[i].textContent = diff.toFixed(2);
+          diffs[i].className = diff > 0 ? "diff gain" : "diff loss";
+          pcts[i].textContent = pct.toFixed(1) + "%";
+          pcts[i].className = pct > 0 ? "pct gain" : "pct loss";
+        } else {
+          diffs[i].textContent = "-";
+          pcts[i].textContent = "-";
+        }
+      }
+    }
+
+    const tbody = document.getElementById("tableBody");
+    exercices.forEach(ex => {
+      tbody.appendChild(createRow(ex));
+    });
+  </script>
+</body>
+</html>
