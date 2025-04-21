@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Suivi Tennis</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f0f8ff;
+      color: #333;
+    }
+    h1 {
+      color: #005a9c;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #e6f0fa;
+    }
+    input[type="number"] {
+      width: 80px;
+    }
+    .gain {
+      color: green;
+    }
+    .loss {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>Suivi des Performances Tennis</h1>
+
+  <table id="performanceTable">
+    <thead>
+      <tr>
+        <th>Exercice</th>
+        <th>Jour 1</th>
+        <th>Jour 7</th>
+        <th>Écart (1-7)</th>
+        <th>% Amélioration</th>
+        <th>Jour 14</th>
+        <th>Écart (7-14)</th>
+        <th>% Amélioration</th>
+        <th>Jour 21</th>
+        <th>Écart (14-21)</th>
+        <th>% Amélioration</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+
+  <script>
+    const exercices = [
+      "Aller-retour largeur",
+      "Aller longueur",
+      "Aller-retour longueur",
+      "Aller-retour largeur avec lignes"
+    ];
+
+    function createRow(exercice) {
+      const row = document.createElement("tr");
+      const tdLabel = document.createElement("td");
+      tdLabel.textContent = exercice;
+      row.appendChild(tdLabel);
+
+      let values = [];
+      for (let i = 0; i < 4; i++) {
+        const input = document.createElement("input");
+        input.type = "number";
+        input.step = "0.01";
+        input.dataset.exo = exercice;
+        input.dataset.jour = i;
+        input.value = localStorage.getItem(`${exercice}-jour${i}`) || "";
+        input.oninput = () => {
+          localStorage.setItem(`${exercice}-jour${i}`, input.value);
+          updateRow(row, exercice);
+        };
+        const td = document.createElement("td");
+        td.appendChild(input);
+        row.appendChild(td);
+        values.push(input);
+      }
+
+      for (let j = 0; j < 3; j++) {
+        const tdDiff = document.createElement("td");
+        tdDiff.className = "diff";
+        row.appendChild(tdDiff);
+        const tdPct = document.createElement("td");
+        tdPct.className = "pct";
+        row.appendChild(tdPct);
+      }
+
+      updateRow(row, exercice);
+      return row;
+    }
+
+    function updateRow(row, exercice) {
+      const inputs = row.querySelectorAll("input");
+      const values = Array.from(inputs).map(i => parseFloat(i.value));
+      const diffs = row.querySelectorAll(".diff");
+      const pcts = row.querySelectorAll(".pct");
+
+      for (let i = 0; i < 3; i++) {
+        if (!isNaN(values[i]) && !isNaN(values[i + 1])) {
+          const diff = values[i] - values[i + 1];
+          const pct = ((diff) / values[i]) * 100;
+          diffs[i].textContent = diff.toFixed(2);
+          diffs[i].className = diff > 0 ? "diff gain" : "diff loss";
+          pcts[i].textContent = pct.toFixed(1) + "%";
+          pcts[i].className = pct > 0 ? "pct gain" : "pct loss";
+        } else {
+          diffs[i].textContent = "-";
+          pcts[i].textContent = "-";
+        }
+      }
+    }
+
+    const tbody = document.getElementById("tableBody");
+    exercices.forEach(ex => {
+      tbody.appendChild(createRow(ex));
+    });
+  </script>
+</body>
+</html>
