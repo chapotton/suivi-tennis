@@ -1,286 +1,43 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Suivi Tennis - Roland Samos</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #fdf6f0;
-      margin: 0;
-      color: #2b5b2b;
-    }
-    main {
-      padding: 100px 20px 20px;
-      background: url('https://upload.wikimedia.org/wikipedia/fr/thumb/3/33/Logo_Roland-Garros.svg/2560px-Logo_Roland-Garros.svg.png') no-repeat center top;
-      background-size: 200px;
-    }
-    h1 {
-      color: #c96f2c;
-    }
-    select, button, input[type="text"], input[type="password"] {
-      margin: 10px 5px;
-      padding: 6px;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-bottom: 40px;
-      background-color: white;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #c96f2c;
-      color: white;
-    }
-    input[type="number"] {
-      width: 80px;
-    }
-    .gain { color: green; }
-    .loss { color: red; }
-    .button-bar {
-      margin-top: 20px;
-    }
-    #rankingTable {
-      border: 2px solid #c96f2c;
-      margin-top: 40px;
-      display: none;
-    }
-    #rankingTable caption {
-      font-weight: bold;
-      margin-bottom: 10px;
-      font-size: 1.2em;
-    }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>Suivi des Performances - Roland Samos</h1>
+// ... Tout le code reste inchangé jusqu'à la fonction renderRanking()
 
-    <div id="identificationZone">
-      <input type="text" id="username" placeholder="Ton prénom ou pseudo" />
-      <button onclick="identifyUser()">Valider</button>
-    </div>
+function renderRanking() {
+  const exercices = [
+    "Aller-retour largeur",
+    "Aller longueur",
+    "Aller-retour longueur",
+    "Aller-retour largeur avec lignes"
+  ];
+  const jours = ["j0", "j1", "j2", "j3", "j4", "j5", "j6", "j7"];
+  const rankingZone = document.getElementById("rankingTable");
+  const tbody = rankingZone.querySelector("tbody");
+  tbody.innerHTML = "";
 
-    <div id="adminZone" style="display: none;">
-      <input type="text" id="newPlayer" placeholder="Ajouter un joueur" />
-      <button onclick="addPlayer()">Ajouter</button>
-      <button onclick="removePlayer()">Supprimer joueur sélectionné</button>
-    </div>
+  rankingZone.querySelector("caption").textContent = "Classements par exercice (meilleur temps)";
 
-    <div id="tableContainer"></div>
-
-    <div class="button-bar" id="exportZone" style="display: none;">
-      <button onclick="exportCSV()">Exporter CSV</button>
-      <button onclick="window.print()">Imprimer</button>
-    </div>
-
-    <table id="rankingTable">
-      <caption>Classement des joueurs (ligne 1 - Aller-retour largeur)</caption>
-      <thead>
-        <tr><th>Position</th><th>Joueur</th><th>Moyenne</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </main>
-
-  <script>
-    let joueurs = JSON.parse(localStorage.getItem("joueurs")) || [];
-    let currentUser = null;
-
-    function identifyUser() {
-      const input = document.getElementById("username").value.trim();
-      if (!input) return;
-      if (input === "Yann69") {
-        currentUser = "admin";
-        document.getElementById("identificationZone").style.display = "none";
-        document.getElementById("adminZone").style.display = "block";
-        document.getElementById("exportZone").style.display = "block";
-        renderTables();
-        renderRanking();
-      } else {
-        if (joueurs.includes(input)) {
-          currentUser = input;
-          document.getElementById("identificationZone").style.display = "none";
-          renderTable(input);
-        } else {
-          if (joueurs.some(j => j.toLowerCase() === input.toLowerCase())) {
-            alert("Ce prénom ou pseudo existe déjà avec une autre orthographe. Merci d’en choisir un légèrement différent.");
-          } else {
-            joueurs.push(input);
-            localStorage.setItem("joueurs", JSON.stringify(joueurs));
-            currentUser = input;
-            document.getElementById("identificationZone").style.display = "none";
-            renderTable(input);
-          }
-        }
+  exercices.forEach((exo, idx) => {
+    const data = joueurs.map(joueur => {
+      let best = Infinity;
+      for (let i = 0; i < jours.length; i++) {
+        const val = parseFloat(localStorage.getItem(`${joueur}-${exo}-${jours[i]}`));
+        if (!isNaN(val) && val < best) best = val;
       }
-    }
+      return { joueur, best: best === Infinity ? null : best };
+    }).filter(j => j.best !== null);
 
-    function renderTables() {
-      const container = document.getElementById("tableContainer");
-      container.innerHTML = "";
-      joueurs.forEach(joueur => container.appendChild(createTable(joueur)));
-    }
+    data.sort((a, b) => a.best - b.best);
 
-    function renderTable(joueur) {
-      const container = document.getElementById("tableContainer");
-      container.innerHTML = "";
-      container.appendChild(createTable(joueur));
-    }
+    const header = document.createElement("tr");
+    header.innerHTML = `<td colspan="3" style="font-weight:bold;background:#e6f0fa;">${exo}</td>`;
+    tbody.appendChild(header);
 
-    function createTable(joueur) {
-      const jours = ["J1", "J7", "J14", "J21", "J28", "J35", "J42", "J49"];
-      const exercices = [
-        "Aller-retour largeur",
-        "Aller longueur",
-        "Aller-retour longueur",
-        "Aller-retour largeur avec lignes"
-      ];
-      const container = document.createElement("div");
-      const title = document.createElement("h2");
-      title.textContent = joueur;
-      container.appendChild(title);
-      const table = document.createElement("table");
-      const thead = document.createElement("thead");
-      const headerRow = document.createElement("tr");
-      headerRow.innerHTML = `<th>Exercice</th>` + jours.map(j => `<th>${j}</th>`).join('') + `<th>Écart</th><th>%</th><th>Moyenne</th>`;
-      thead.appendChild(headerRow);
-      table.appendChild(thead);
-      const tbody = document.createElement("tbody");
-      exercices.forEach(ex => {
-        const row = document.createElement("tr");
-        const tdLabel = document.createElement("td");
-        tdLabel.textContent = ex;
-        row.appendChild(tdLabel);
-        const inputs = [];
-        jours.forEach((j, i) => {
-          const input = document.createElement("input");
-          input.type = "number";
-          input.step = "0.01";
-          input.value = localStorage.getItem(`${joueur}-${ex}-j${i}`) || "";
-          input.oninput = () => {
-            localStorage.setItem(`${joueur}-${ex}-j${i}`, input.value);
-            updateRow(row, joueur, ex);
-            if (currentUser === "admin") renderRanking();
-          };
-          const td = document.createElement("td");
-          td.appendChild(input);
-          row.appendChild(td);
-          inputs.push(input);
-        });
-        const tdEcart = document.createElement("td");
-        const tdPct = document.createElement("td");
-        const tdMoy = document.createElement("td");
-        tdEcart.className = "diff";
-        tdPct.className = "pct";
-        tdMoy.className = "moyenne";
-        row.appendChild(tdEcart);
-        row.appendChild(tdPct);
-        row.appendChild(tdMoy);
-        tbody.appendChild(row);
-        updateRow(row, joueur, ex);
-      });
-      table.appendChild(tbody);
-      container.appendChild(table);
-      return container;
-    }
+    data.forEach((j, index) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${index + 1}</td><td>${j.joueur}</td><td>${j.best.toFixed(2)}</td>`;
+      tbody.appendChild(row);
+    });
+  });
 
-    function updateRow(row, joueur, exercice) {
-      const inputs = row.querySelectorAll("input");
-      const allValues = Array.from(inputs).map(i => parseFloat(i.value));
-      const filledValues = allValues.filter(v => !isNaN(v));
-      const diffs = row.querySelector(".diff");
-      const pcts = row.querySelector(".pct");
-      const moyTd = row.querySelector(".moyenne");
-      const lastIndex = allValues.map((v, i) => !isNaN(v) ? i : null).filter(i => i !== null).slice(-2);
-      if (lastIndex.length === 2) {
-        const prev = allValues[lastIndex[0]];
-        const last = allValues[lastIndex[1]];
-        const diff = prev - last;
-        const pct = (diff / prev) * 100;
-        diffs.textContent = diff.toFixed(2);
-        diffs.className = diff > 0 ? "diff gain" : "diff loss";
-        pcts.textContent = pct.toFixed(1) + "%";
-        pcts.className = pct > 0 ? "pct gain" : "pct loss";
-      } else {
-        diffs.textContent = "-";
-        pcts.textContent = "-";
-      }
-      const moyenne = filledValues.reduce((a, b) => a + b, 0) / filledValues.length;
-      moyTd.textContent = isNaN(moyenne) ? "-" : moyenne.toFixed(2);
-    }
+  rankingZone.style.display = "table";
+}
 
-    function renderRanking() {
-      const rankingData = joueurs.map(joueur => {
-        const values = [];
-        for (let i = 0; i < 8; i++) {
-          const val = parseFloat(localStorage.getItem(`${joueur}-Aller-retour largeur-j${i}`));
-          if (!isNaN(val)) values.push(val);
-        }
-        const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
-        return { joueur, moyenne: avg };
-      }).filter(j => j.moyenne !== null);
-
-      rankingData.sort((a, b) => a.moyenne - b.moyenne);
-      const tbody = document.querySelector("#rankingTable tbody");
-      tbody.innerHTML = "";
-      rankingData.forEach((j, index) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `<td>${index + 1}</td><td>${j.joueur}</td><td>${j.moyenne.toFixed(2)}</td>`;
-        tbody.appendChild(row);
-      });
-      document.getElementById("rankingTable").style.display = "table";
-    }
-
-    function addPlayer() {
-      const name = document.getElementById("newPlayer").value.trim();
-      if (name && !joueurs.includes(name)) {
-        joueurs.push(name);
-        localStorage.setItem("joueurs", JSON.stringify(joueurs));
-        renderTables();
-        renderRanking();
-      }
-    }
-
-    function removePlayer() {
-      const name = prompt("Quel joueur voulez-vous supprimer ?");
-      if (name && joueurs.includes(name)) {
-        joueurs = joueurs.filter(j => j !== name);
-        localStorage.setItem("joueurs", JSON.stringify(joueurs));
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith(name + "-")) localStorage.removeItem(key);
-        });
-        renderTables();
-        renderRanking();
-      }
-    }
-
-    function exportCSV() {
-      let csv = "Joueur,Exercice,J1,J7,J14,J21,J28,J35,J42,J49,Écart,% de gain,Moyenne\n";
-      document.querySelectorAll("h2").forEach((title, index) => {
-        const joueur = title.textContent;
-        const table = title.nextElementSibling;
-        table.querySelectorAll("tbody tr").forEach(row => {
-          const cells = row.querySelectorAll("td");
-          const rowData = Array.from(cells).map(cell => cell.querySelector("input")?.value || cell.textContent);
-          csv += [joueur, ...rowData].join(",") + "\n";
-        });
-      });
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `suivi_tennis_complet.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-  </script>
-</body>
-</html>
+// ... reste du code inchangé
