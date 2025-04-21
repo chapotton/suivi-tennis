@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Suivi Tennis - Joueurs</title>
+  <title>Suivi Tennis - Roland Samos</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #fdf6f0;
-      margin: 20px;
+      background: #fdf6f0 url('https://upload.wikimedia.org/wikipedia/fr/thumb/3/33/Logo_Roland-Garros.svg/2560px-Logo_Roland-Garros.svg.png') no-repeat center top;
+      background-size: 200px;
+      margin: 100px 20px 20px;
       color: #2b5b2b;
     }
     h1 {
@@ -21,7 +22,8 @@
     table {
       border-collapse: collapse;
       width: 100%;
-      margin-bottom: 20px;
+      margin-bottom: 40px;
+      background-color: white;
     }
     th, td {
       border: 1px solid #ccc;
@@ -43,12 +45,11 @@
   </style>
 </head>
 <body>
-  <h1>Suivi des Performances Tennis</h1>
+  <h1>Suivi des Performances - Roland Samos</h1>
 
-  <label for="playerSelect">Choisir un joueur :</label>
-  <select id="playerSelect"></select>
   <input type="text" id="newPlayer" placeholder="Ajouter un joueur" />
   <button onclick="addPlayer()">Ajouter</button>
+  <button onclick="removePlayer()">Supprimer joueur sélectionné</button>
 
   <div id="tableContainer"></div>
 
@@ -68,30 +69,34 @@
 
     let joueurs = JSON.parse(localStorage.getItem("joueurs")) || ["Morgan", "Loris", "Yann"];
 
-    function populatePlayerSelect() {
-      const select = document.getElementById("playerSelect");
-      select.innerHTML = "";
-      joueurs.forEach(j => {
-        const option = document.createElement("option");
-        option.value = j;
-        option.textContent = j;
-        select.appendChild(option);
-      });
-    }
-
     function addPlayer() {
       const newPlayer = document.getElementById("newPlayer").value.trim();
       if (newPlayer && !joueurs.includes(newPlayer)) {
         joueurs.push(newPlayer);
         localStorage.setItem("joueurs", JSON.stringify(joueurs));
-        populatePlayerSelect();
         document.getElementById("newPlayer").value = "";
-        document.getElementById("playerSelect").value = newPlayer;
-        renderTable();
+        renderTables();
+      }
+    }
+
+    function removePlayer() {
+      const name = prompt("Quel joueur voulez-vous supprimer ?");
+      if (name && joueurs.includes(name)) {
+        joueurs = joueurs.filter(j => j !== name);
+        localStorage.setItem("joueurs", JSON.stringify(joueurs));
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith(name + "-")) localStorage.removeItem(key);
+        });
+        renderTables();
       }
     }
 
     function createTable(joueur) {
+      const container = document.createElement("div");
+      const title = document.createElement("h2");
+      title.textContent = joueur;
+      container.appendChild(title);
+
       const table = document.createElement("table");
       const thead = document.createElement("thead");
       const headerRow = document.createElement("tr");
@@ -138,7 +143,8 @@
       });
 
       table.appendChild(tbody);
-      return table;
+      container.appendChild(table);
+      return container;
     }
 
     function updateRow(row, joueur, exercice) {
@@ -169,34 +175,36 @@
       moyTd.textContent = isNaN(moyenne) ? "-" : moyenne.toFixed(2);
     }
 
-    function renderTable() {
-      const joueur = document.getElementById("playerSelect").value;
+    function renderTables() {
       const container = document.getElementById("tableContainer");
       container.innerHTML = "";
-      container.appendChild(createTable(joueur));
+      joueurs.forEach(joueur => {
+        container.appendChild(createTable(joueur));
+      });
     }
 
     function exportCSV() {
-      const joueur = document.getElementById("playerSelect").value;
-      let csv = "Exercice," + jours.join(",") + ",Écart,% de gain,Moyenne\n";
-      document.querySelectorAll("tbody tr").forEach(row => {
-        const cells = row.querySelectorAll("td");
-        const rowData = Array.from(cells).map(cell => cell.querySelector("input")?.value || cell.textContent);
-        csv += rowData.join(",") + "\n";
+      let csv = "Joueur,Exercice," + jours.join(",") + ",Écart,% de gain,Moyenne\n";
+      document.querySelectorAll("h2").forEach((title, index) => {
+        const joueur = title.textContent;
+        const table = title.nextElementSibling;
+        table.querySelectorAll("tbody tr").forEach(row => {
+          const cells = row.querySelectorAll("td");
+          const rowData = Array.from(cells).map(cell => cell.querySelector("input")?.value || cell.textContent);
+          csv += [joueur, ...rowData].join(",") + "\n";
+        });
       });
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${joueur}_suivi_tennis.csv`;
+      a.download = `suivi_tennis_complet.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
     }
 
-    document.getElementById("playerSelect").addEventListener("change", renderTable);
-    populatePlayerSelect();
-    renderTable();
+    renderTables();
   </script>
 </body>
 </html>
